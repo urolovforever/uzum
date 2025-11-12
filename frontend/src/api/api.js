@@ -64,6 +64,10 @@ export const login = (username, password) => api.post('/products/auth/login/', {
 export const logout = () => api.post('/products/auth/logout/');
 export const checkAuth = () => api.get('/products/auth/check/');
 
+// Admin Auth endpoints
+export const adminLogin = (username, password) => api.post('/products/auth/admin/login/', { username, password });
+export const checkAdminAuth = () => api.get('/products/auth/admin/check/');
+
 // Admin endpoints
 export const getAdminProducts = (params = {}) => api.get('/products/admin/products/', { params });
 export const createProduct = (formData) => {

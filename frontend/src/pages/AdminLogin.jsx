@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api/api';
+import { adminLogin } from '../api/api';
 
 function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -15,7 +15,7 @@ function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await login(username, password);
+      const response = await adminLogin(username, password);
 
       if (response.data.user) {
         // Login muvaffaqiyatli
