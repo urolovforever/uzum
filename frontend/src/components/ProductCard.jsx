@@ -9,52 +9,13 @@ function ProductCard({ product }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Rasmlar ro'yxati
-  const images = [product.image, product.image_2, product.image_3].filter(Boolean);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // Swipe detection
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e) => {
-    setTouchEnd(0); // Reset
-    setTouchStart(e.targetTouches[0].clientX);
-    setIsSwiping(false);
-  };
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe || isRightSwipe) {
-      setIsSwiping(true);
-      if (isLeftSwipe) {
-        // O'ngga swipe - keyingi rasm
-        setCurrentImageIndex((prev) => (prev + 1) % images.length);
-      } else if (isRightSwipe) {
-        // Chapga swipe - oldingi rasm
-        setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-      }
-    }
-  };
-
-  const handleImageClick = (e) => {
-    if (isSwiping) {
-      e.preventDefault();
-      setTimeout(() => setIsSwiping(false), 100);
-    }
-  };
+  // Calculate discounted price
+  const discountedPrice = product.discount_percentage > 0
+    ? product.price * (1 - product.discount_percentage / 100)
+    : product.price;
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -69,179 +30,134 @@ function ProductCard({ product }) {
     const result = await addToCart(product.id, 1);
     setAddingToCart(false);
 
-    if (result.success) {
-      // Optional: Show success notification
-    } else {
+    if (!result.success) {
       alert(result.error);
     }
   };
 
-  // Chegirma badge rang va ko'rinishni aniqlash
-  const getDiscountBadgeClass = () => {
-    if (product.discount_percentage >= 15) {
-      return 'bg-red-500 text-white'; // 15%+ qizil
-    } else if (product.discount_percentage >= 5) {
-      return 'bg-yellow-400 text-gray-900'; // 5-15% sariq
-    }
-    return null; // 5% dan kam - ko'rinmasin
-  };
-
-  const discountBadgeClass = getDiscountBadgeClass();
-
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group">
-      {/* Rasm - swipe bilan aylanadi va bosilsa detailsga olib boradi */}
-      <Link
-        to={`/products/${product.slug}`}
-        onClick={handleImageClick}
-        className="block"
-      >
-        <div
-          className="relative overflow-hidden aspect-[3/4]"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          {/* Slide transitions bilan carousel */}
-          <div
-            className="flex transition-transform duration-500 ease-out h-full"
-            style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
-          >
-            {images.map((image, index) => (
-              <img
-                key={index}
-                src={image}
-                alt={`${product.name} - ${index + 1}`}
-                className="w-full h-full object-cover flex-shrink-0"
-              />
-            ))}
-          </div>
+    <div
+      className="group relative bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-2xl"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <Link to={`/products/${product.slug}`} className="block relative aspect-[3/4] overflow-hidden bg-gray-100">
+        {/* Main Image */}
+        <img
+          src={product.image}
+          alt={product.name}
+          className={`w-full h-full object-cover transition-opacity duration-500 ${
+            isHovered && product.image_2 ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
 
-        {/* Rasm indicator dots - faqat ko'p rasm bo'lsa */}
-        {images.length > 1 && (
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-            {images.map((_, index) => (
-              <div
-                key={index}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  index === currentImageIndex
-                    ? 'bg-white w-3'
-                    : 'bg-white/50'
-                }`}
-              />
-            ))}
+        {/* Alternate Image on Hover */}
+        {product.image_2 && (
+          <img
+            src={product.image_2}
+            alt={`${product.name} - alternate`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+              isHovered ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        )}
+
+        {/* Discount Badge */}
+        {product.discount_percentage > 0 && (
+          <div className="absolute top-3 left-3 z-10">
+            <span className="inline-block px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
+              -{product.discount_percentage}%
+            </span>
           </div>
         )}
 
-        {/* Badges Container */}
-        {/* Chegirma Badge - yuqori chap */}
-        {discountBadgeClass && (
-          <span className={`absolute top-1.5 left-1.5 sm:top-2 sm:left-2 ${discountBadgeClass} text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg font-bold shadow-lg backdrop-blur-sm`}>
-            -{product.discount_percentage}%
-          </span>
-        )}
-
-        {/* TOP Badge - yuqori o'ng */}
+        {/* Featured Badge */}
         {product.is_featured && (
-          <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg font-semibold shadow-lg backdrop-blur-sm flex items-center gap-0.5 sm:gap-1">
-            <span>⭐</span>
-            <span>TOP</span>
-          </span>
+          <div className="absolute top-3 right-3 z-10">
+            <span className="inline-block px-3 py-1 bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-md">
+              TOP
+            </span>
+          </div>
         )}
+
+        {/* Quick Actions - Visible on Hover */}
+        <div className={`absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent transition-all duration-300 ${
+          isHovered ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+        }`}>
+          <button
+            onClick={handleAddToCart}
+            disabled={addingToCart}
+            className="w-full py-3 bg-white text-gray-900 font-medium rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {addingToCart ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Qo'shilmoqda...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>Savatga qo'shish</span>
+              </>
+            )}
+          </button>
         </div>
       </Link>
 
-      <div className="p-2.5 sm:p-4">
-        <Link to={`/products/${product.slug}`}>
-          <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-0 hover:text-blue-600 transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]">
+      {/* Product Info */}
+      <div className="p-4 space-y-2">
+        <Link to={`/products/${product.slug}`} className="block">
+          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 hover:text-purple-600 transition-colors min-h-[2.5rem]">
             {product.name}
           </h3>
         </Link>
 
-        {/* Tavsif - 2 qator */}
-        {product.description && (
-          <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-2 mb-1.5 sm:mb-2 mt-0.5 font-normal leading-snug">
-            {product.description}
-          </p>
-        )}
-
-        {/* Narx */}
-        {product.discount_percentage >= 5 ? (
-          <div className="mb-2 sm:mb-3">
-            <div className="flex items-baseline gap-1 sm:gap-2">
-              <p className="text-base sm:text-xl font-bold text-red-600">
-                {formatPrice(product.price * (1 - product.discount_percentage / 100))} so'm
-              </p>
-            </div>
-            <p className="text-[10px] sm:text-xs text-gray-400 line-through">
+        {/* Price */}
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-bold text-gray-900">
+            {formatPrice(discountedPrice)} so'm
+          </span>
+          {product.discount_percentage > 0 && (
+            <span className="text-sm text-gray-400 line-through">
               {formatPrice(product.price)} so'm
-            </p>
-          </div>
-        ) : (
-          <div className="mb-2 sm:mb-3">
-            <p className="text-base sm:text-xl font-bold text-gray-800">
-              {formatPrice(product.price)} so'm
-            </p>
-          </div>
-        )}
-
-        {/* Tugmalar - kichik ekranlarda ham yaxshi ko'rinadi */}
-        <div className="space-y-1 sm:space-y-1.5">
-          {/* Savatga qo'shish tugmasi */}
-          <button
-            onClick={handleAddToCart}
-            disabled={addingToCart}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-md sm:rounded-lg transition-all duration-200 hover:shadow-lg flex items-center justify-center gap-0.5 sm:gap-1 font-medium text-[10px] sm:text-xs disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span className="whitespace-nowrap">
-              {addingToCart ? 'Qo\'shilmoqda...' : 'Savatga qo\'shish'}
             </span>
-          </button>
+          )}
+        </div>
 
-          {/* Uzum va Yandex tugmalari */}
-          <div className="flex gap-1 sm:gap-1.5">
-            <a
-              href={product.uzum_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${product.yandex_market_link ? 'flex-1' : 'w-full'} bg-purple-600 hover:bg-purple-700 text-white py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-md sm:rounded-lg transition-all duration-200 hover:shadow-lg flex items-center justify-center gap-0.5 sm:gap-1 font-medium text-[10px] sm:text-xs`}
-            >
-              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-              <span className="whitespace-nowrap">Uzum</span>
-            </a>
-
-            {product.yandex_market_link && (
-              <a
-                href={product.yandex_market_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-md sm:rounded-lg transition-all duration-200 hover:shadow-lg flex items-center justify-center gap-0.5 sm:gap-1 font-medium text-[10px] sm:text-xs"
-              >
-                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <span className="whitespace-nowrap">Yandex</span>
-              </a>
-            )}
-          </div>
-
-          {/* Ism yozdirish tugmasi - Telegram */}
+        {/* External Links */}
+        <div className="flex gap-2 pt-2">
           <a
-            href="https://t.me/moongift_uz"
+            href={product.uzum_link}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-md sm:rounded-lg transition-all duration-200 hover:shadow-lg flex items-center justify-center gap-0.5 sm:gap-1 font-medium text-[10px] sm:text-xs"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
           >
-            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.053 5.56-5.023c.242-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span className="whitespace-nowrap">Ism yozdirish</span>
+            Uzum
           </a>
+
+          {product.yandex_market_link && (
+            <a
+              href={product.yandex_market_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 py-2 px-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              Yandex
+            </a>
+          )}
         </div>
       </div>
     </div>
