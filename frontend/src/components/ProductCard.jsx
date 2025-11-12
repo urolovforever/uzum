@@ -1,8 +1,13 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 function ProductCard({ product }) {
   const formatPrice = (price) => new Intl.NumberFormat('uz-UZ').format(price);
+  const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   // Rasmlar ro'yxati
   const images = [product.image, product.image_2, product.image_3].filter(Boolean);
@@ -10,6 +15,7 @@ function ProductCard({ product }) {
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   // Swipe detection
   const minSwipeDistance = 50;
@@ -47,6 +53,26 @@ function ProductCard({ product }) {
     if (isSwiping) {
       e.preventDefault();
       setTimeout(() => setIsSwiping(false), 100);
+    }
+  };
+
+  const handleAddToCart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: { pathname: '/products' } } });
+      return;
+    }
+
+    setAddingToCart(true);
+    const result = await addToCart(product.id, 1);
+    setAddingToCart(false);
+
+    if (result.success) {
+      // Optional: Show success notification
+    } else {
+      alert(result.error);
     }
   };
 
@@ -161,6 +187,20 @@ function ProductCard({ product }) {
 
         {/* Tugmalar - kichik ekranlarda ham yaxshi ko'rinadi */}
         <div className="space-y-1 sm:space-y-1.5">
+          {/* Savatga qo'shish tugmasi */}
+          <button
+            onClick={handleAddToCart}
+            disabled={addingToCart}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-1 sm:py-1.5 px-1.5 sm:px-2 rounded-md sm:rounded-lg transition-all duration-200 hover:shadow-lg flex items-center justify-center gap-0.5 sm:gap-1 font-medium text-[10px] sm:text-xs disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span className="whitespace-nowrap">
+              {addingToCart ? 'Qo\'shilmoqda...' : 'Savatga qo\'shish'}
+            </span>
+          </button>
+
           {/* Uzum va Yandex tugmalari */}
           <div className="flex gap-1 sm:gap-1.5">
             <a
