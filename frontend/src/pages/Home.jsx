@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getFeaturedProducts, getCategories } from '../api/api';
 import ProductCard from '../components/ProductCard';
@@ -8,10 +8,48 @@ function Home() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const categoryScrollRef = useRef(null);
+  const newProductsScrollRef = useRef(null);
+  const saleProductsScrollRef = useRef(null);
+
+  // Hero slides data
+  const heroSlides = [
+    {
+      id: 1,
+      title: "Yangi Mavsum Kolleksiyasi",
+      subtitle: "Zamonaviy dizayn va yuqori sifat",
+      cta: "Mahsulotlarni ko'rish",
+      bgColor: "from-stone-100 to-stone-50"
+    },
+    {
+      id: 2,
+      title: "Eksklyuziv Chegirmalar",
+      subtitle: "50% gacha chegirma",
+      cta: "Mahsulotlarni ko'rish",
+      bgColor: "from-rose-50 to-pink-50"
+    },
+    {
+      id: 3,
+      title: "Premium Kolleksiya",
+      subtitle: "Siz uchun eng yaxshisi",
+      cta: "Mahsulotlarni ko'rish",
+      bgColor: "from-amber-50 to-orange-50"
+    }
+  ];
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-play hero carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroSlides.length]);
 
   const loadData = async () => {
     try {
@@ -29,218 +67,308 @@ function Home() {
     }
   };
 
+  const scroll = (ref, direction) => {
+    if (ref.current) {
+      const scrollAmount = direction === 'left' ? -400 : 400;
+      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const newProducts = featuredProducts.filter(p => p.is_new || p.is_featured).slice(0, 8);
+  const saleProducts = featuredProducts.filter(p => p.discount_percentage > 0).slice(0, 8);
+
   return (
     <div className="bg-white">
-      {/* Hero Banner - Modern Fashion Style */}
-      <section className="relative h-[60vh] md:h-[75vh] overflow-hidden bg-gradient-to-br from-pink-50 via-white to-purple-50">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyMTYsMTgwLDI1NCwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40"></div>
-
-        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
-          <div className="w-full md:w-1/2 space-y-6 animate-fade-in">
-            <div className="inline-block px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-4">
-              Yangi kolleksiya
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 leading-tight">
-              Ayollar
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                Kiyimlari
-              </span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-gray-600 max-w-lg leading-relaxed">
-              Zamonaviy dizayn va yuqori sifat. Har bir ayol uchun mukammal tanlov.
-            </p>
-
-            <div className="flex flex-wrap gap-4 pt-4">
-              <Link
-                to="/products"
-                className="px-8 py-4 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-              >
-                Xarid qilish
-              </Link>
-              <Link
-                to="/products"
-                className="px-8 py-4 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-50 transition-all duration-300 border-2 border-gray-200 hover:border-gray-300"
-              >
-                Kolleksiyani ko'rish
-              </Link>
+      {/* Hero Carousel Section */}
+      <section className="relative h-[70vh] md:h-[80vh] overflow-hidden">
+        {heroSlides.map((slide, index) => (
+          <div
+            key={slide.id}
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div className={`h-full bg-gradient-to-br ${slide.bgColor} flex items-center justify-center`}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-light text-gray-900 mb-4 tracking-tight">
+                  {slide.title}
+                </h1>
+                <p className="text-lg md:text-xl text-gray-600 mb-8 font-light">
+                  {slide.subtitle}
+                </p>
+                <Link
+                  to="/products"
+                  className="inline-block px-10 py-4 bg-gray-900 text-white text-sm font-light tracking-wide hover:bg-gray-800 transition-colors duration-300"
+                >
+                  {slide.cta}
+                </Link>
+              </div>
             </div>
           </div>
+        ))}
+
+        {/* Arrow Controls */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 p-2 md:p-3 bg-white/80 hover:bg-white text-gray-900 transition-all duration-300 z-10"
+          aria-label="Previous slide"
+        >
+          <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 p-2 md:p-3 bg-white/80 hover:bg-white text-gray-900 transition-all duration-300 z-10"
+          aria-label="Next slide"
+        >
+          <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* Dot Indicators */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {heroSlides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === currentSlide ? 'bg-gray-900 w-8' : 'bg-gray-400'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Categories Carousel Section */}
       {categories.length > 0 && (
-        <section className="py-16 bg-gray-50">
+        <section className="py-16 md:py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-2 tracking-tight">
                 Kategoriyalar
               </h2>
-              <p className="text-lg text-gray-600">
+              <p className="text-gray-600 font-light">
                 O'zingizga mos bo'lgan kategoriyani tanlang
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  to={`/products?category=${category.slug}`}
-                  className="group relative h-64 rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10"></div>
-                  <div className="absolute inset-0 bg-gray-200">
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <div className="relative">
+              {/* Scroll buttons */}
+              {categories.length > 4 && (
+                <>
+                  <button
+                    onClick={() => scroll(categoryScrollRef, 'left')}
+                    className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-2 bg-white shadow-md hover:bg-gray-50 transition-colors"
+                    aria-label="Scroll left"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => scroll(categoryScrollRef, 'right')}
+                    className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-2 bg-white shadow-md hover:bg-gray-50 transition-colors"
+                    aria-label="Scroll right"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              {/* Categories scroll container */}
+              <div
+                ref={categoryScrollRef}
+                className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    to={`/products?category=${category.slug}`}
+                    className="group flex-shrink-0 w-64 h-80 relative overflow-hidden bg-gray-100 hover:shadow-lg transition-shadow duration-300"
+                  >
+                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                      <svg className="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">
-                      {category.name}
-                    </h3>
-                    <p className="text-white/80 text-sm">
-                      {category.product_count} mahsulot
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                      <h3 className="text-xl font-light mb-1 group-hover:translate-y-[-4px] transition-transform duration-300">
+                        {category.name}
+                      </h3>
+                      <p className="text-sm text-white/80 font-light">
+                        {category.product_count} mahsulot
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* Featured Products */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-12">
-            <div>
-              <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-3">
-                Mashhur mahsulotlar
-              </h2>
-              <p className="text-lg text-gray-600">
-                Eng ko'p sotilgan va sevimli kiyimlarimiz
-              </p>
-            </div>
-            <Link
-              to="/products"
-              className="hidden md:inline-flex items-center gap-2 text-gray-900 font-medium hover:text-purple-600 transition-colors group"
-            >
-              Barchasini ko'rish
-              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8 rounded-r-lg">
-              <p className="text-red-700">{error}</p>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+      {/* New Products Section (Yangiliklar) */}
+      {newProducts.length > 0 && (
+        <section className="py-16 md:py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-end mb-10">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-2 tracking-tight">
+                  Yangiliklar
+                </h2>
+                <p className="text-gray-600 font-light">
+                  Eng so'nggi kolleksiyalar
+                </p>
               </div>
             </div>
-          ) : featuredProducts.length === 0 ? (
-            <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
-              <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              <p className="text-xl text-gray-600 font-medium mb-2">Mashhur mahsulotlar hali yo'q</p>
-              <p className="text-gray-500">Admin paneldan mahsulot qo'shing</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
-                {featuredProducts.slice(0, 8).map((product) => (
-                  <ProductCard key={product.id} product={product} />
+
+            <div className="relative">
+              {/* Scroll buttons */}
+              {newProducts.length > 4 && (
+                <>
+                  <button
+                    onClick={() => scroll(newProductsScrollRef, 'left')}
+                    className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-2 bg-white shadow-md hover:bg-gray-50 transition-colors"
+                    aria-label="Scroll left"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => scroll(newProductsScrollRef, 'right')}
+                    className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-2 bg-white shadow-md hover:bg-gray-50 transition-colors"
+                    aria-label="Scroll right"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              {/* Products scroll container */}
+              <div
+                ref={newProductsScrollRef}
+                className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {newProducts.map((product) => (
+                  <div key={product.id} className="flex-shrink-0 w-64">
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
-
-              <div className="text-center md:hidden">
-                <Link
-                  to="/products"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-all duration-300"
-                >
-                  Barcha mahsulotlar
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50 border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
-            <div className="text-center group">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Bepul yetkazib berish</h3>
-              <p className="text-gray-600">Barcha buyurtmalar uchun bepul yetkazib berish xizmati</p>
             </div>
 
-            <div className="text-center group">
-              <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-pink-200 transition-colors">
-                <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Xavfsiz to'lov</h3>
-              <p className="text-gray-600">100% xavfsiz onlayn to'lov tizimi</p>
-            </div>
-
-            <div className="text-center group">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Oson qaytarish</h3>
-              <p className="text-gray-600">14 kun ichida oson qaytarish imkoniyati</p>
+            <div className="text-center mt-10">
+              <Link
+                to="/products?new=true"
+                className="inline-block px-10 py-3 border border-gray-900 text-gray-900 text-sm font-light tracking-wide hover:bg-gray-900 hover:text-white transition-colors duration-300"
+              >
+                Barchasi
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Newsletter Section */}
-      <section className="py-20 bg-gradient-to-r from-purple-600 to-pink-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Yangiliklar va chegirmalar
-          </h2>
-          <p className="text-lg text-white/90 mb-8">
-            Email manzilingizni qoldiring va eng yangi kolleksiyalar va chegirmalar haqida birinchi bo'lib xabardor bo'ling
-          </p>
-          <form className="max-w-md mx-auto flex gap-3">
-            <input
-              type="email"
-              placeholder="Email manzilingiz"
-              className="flex-1 px-6 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50"
-            />
-            <button
-              type="submit"
-              className="px-8 py-4 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
-            >
-              Obuna
-            </button>
-          </form>
+      {/* Sale Products Section (Chegirmadagilar) */}
+      {saleProducts.length > 0 && (
+        <section className="py-16 md:py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-end mb-10">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-2 tracking-tight">
+                  Chegirmadagilar
+                </h2>
+                <p className="text-gray-600 font-light">
+                  Maxsus takliflar va chegirmalar
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              {/* Scroll buttons */}
+              {saleProducts.length > 4 && (
+                <>
+                  <button
+                    onClick={() => scroll(saleProductsScrollRef, 'left')}
+                    className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-2 bg-white shadow-md hover:bg-gray-50 transition-colors"
+                    aria-label="Scroll left"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => scroll(saleProductsScrollRef, 'right')}
+                    className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-2 bg-white shadow-md hover:bg-gray-50 transition-colors"
+                    aria-label="Scroll right"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              {/* Products scroll container */}
+              <div
+                ref={saleProductsScrollRef}
+                className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {saleProducts.map((product) => (
+                  <div key={product.id} className="flex-shrink-0 w-64">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-center mt-10">
+              <Link
+                to="/products?sale=true"
+                className="inline-block px-10 py-3 border border-gray-900 text-gray-900 text-sm font-light tracking-wide hover:bg-gray-900 hover:text-white transition-colors duration-300"
+              >
+                Barchasi
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
         </div>
-      </section>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+            {error}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
