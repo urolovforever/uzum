@@ -1,12 +1,15 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { getCategories } from '../api/api';
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
@@ -15,8 +18,20 @@ function Navbar() {
   const isActive = (path) => location.pathname === path;
   const cartCount = getCartCount();
 
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const response = await getCategories();
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Kategoriyalarni yuklashda xato:', error);
+    }
+  };
+
   const navLinks = [
-    { path: '/products', label: 'Kiyimlar' },
     { path: '/products?new=true', label: 'Yangiliklar' },
     { path: '/products?sale=true', label: 'Chegirmadagilar' },
     { path: '/about', label: 'Biz haqimizda' },
@@ -39,15 +54,54 @@ function Navbar() {
           </Link>
 
           {/* Center Navigation - Desktop Only */}
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-10">
+            {/* Kiyimlar with Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setCategoriesOpen(true)}
+              onMouseLeave={() => setCategoriesOpen(false)}
+            >
+              <button
+                className="text-base font-semibold tracking-wide transition-colors text-gray-900 hover:text-gray-600 py-2"
+              >
+                Kiyimlar
+              </button>
+
+              {/* Categories Dropdown */}
+              {categoriesOpen && categories.length > 0 && (
+                <div className="absolute left-0 top-full mt-2 w-64 bg-white shadow-lg border border-gray-100 py-2 z-50">
+                  {categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      to={`/products?category=${category.slug}`}
+                      className="block px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      onClick={() => setCategoriesOpen(false)}
+                    >
+                      {category.name}
+                      <span className="text-xs text-gray-400 ml-2">
+                        ({category.product_count})
+                      </span>
+                    </Link>
+                  ))}
+                  <Link
+                    to="/products"
+                    className="block px-6 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50 border-t border-gray-100 mt-2"
+                    onClick={() => setCategoriesOpen(false)}
+                  >
+                    Barchasi
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-light tracking-wide transition-colors ${
+                className={`text-base font-semibold tracking-wide transition-colors py-2 ${
                   isActive(link.path)
-                    ? 'text-gray-900 border-b-2 border-gray-900 pb-1'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'text-gray-900 border-b-2 border-gray-900'
+                    : 'text-gray-900 hover:text-gray-600'
                 }`}
               >
                 {link.label}
@@ -180,13 +234,58 @@ function Navbar() {
         {/* Mobile Menu */}
         {isOpen && (
           <div className="lg:hidden py-4 border-t border-gray-100">
+            {/* Mobile Categories */}
+            <div className="mb-2">
+              <button
+                onClick={() => setCategoriesOpen(!categoriesOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 text-base font-semibold text-gray-900"
+              >
+                <span>Kiyimlar</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {categoriesOpen && (
+                <div className="bg-gray-50 py-2">
+                  {categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      to={`/products?category=${category.slug}`}
+                      onClick={() => {
+                        setIsOpen(false);
+                        setCategoriesOpen(false);
+                      }}
+                      className="block px-8 py-2 text-sm text-gray-700"
+                    >
+                      {category.name}
+                    </Link>
+                  ))}
+                  <Link
+                    to="/products"
+                    onClick={() => {
+                      setIsOpen(false);
+                      setCategoriesOpen(false);
+                    }}
+                    className="block px-8 py-2 text-sm font-semibold text-gray-900 border-t border-gray-200 mt-1 pt-3"
+                  >
+                    Barchasi
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setIsOpen(false)}
-                className={`block px-4 py-3 text-sm font-light ${
-                  isActive(link.path) ? 'text-gray-900' : 'text-gray-600'
+                className={`block px-4 py-3 text-base font-semibold ${
+                  isActive(link.path) ? 'text-gray-900' : 'text-gray-900'
                 }`}
               >
                 {link.label}
@@ -198,7 +297,7 @@ function Navbar() {
                 <Link
                   to="/orders"
                   onClick={() => setIsOpen(false)}
-                  className="block px-4 py-3 text-sm font-light text-gray-600"
+                  className="block px-4 py-3 text-sm text-gray-600"
                 >
                   Buyurtmalarim
                 </Link>
@@ -207,7 +306,7 @@ function Navbar() {
                     handleLogout();
                     setIsOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-3 text-sm font-light text-gray-600"
+                  className="block w-full text-left px-4 py-3 text-sm text-gray-600"
                 >
                   Chiqish ({user?.username})
                 </button>
@@ -216,7 +315,7 @@ function Navbar() {
               <Link
                 to="/login"
                 onClick={() => setIsOpen(false)}
-                className="block px-4 py-3 text-sm font-light text-gray-600"
+                className="block px-4 py-3 text-sm text-gray-600"
               >
                 Kirish
               </Link>
